@@ -1,2 +1,3 @@
 # Chucu-Racing
-esto es solo una prueba.
+proyecto chucu racing
+actualizacion semana 8
