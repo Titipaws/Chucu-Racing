@@ -1,8 +1,6 @@
-
 import socket
 import json
 import time
-import zlib
 
 def analyze_data(data_list):
     """
@@ -35,13 +33,18 @@ def analyze_data(data_list):
         return {"error": "No se pudo realizar el análisis", "detalle": str(e)}
 
 # Configuración del servidor
-HOST = "0.0.0.0"
+HOST = "127.0.0.1"
 PORT = 12345
 BROADCAST_IP = "255.255.255.255"
 BUFFER_SIZE = 4096
 
+# Crear un socket UDP
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+# Asignar el socket a la dirección y puerto especificados
 server_socket.bind((HOST, PORT))
+
+# Habilitar el modo de broadcast en el socket
 server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
 print(f"Servidor en espera de datos en {HOST}:{PORT}...")
@@ -49,40 +52,43 @@ print(f"Servidor en espera de datos en {HOST}:{PORT}...")
 data_storage = []  # Lista para almacenar todos los mensajes recibidos
 
 while True:
-    compressed_data, addr = server_socket.recvfrom(BUFFER_SIZE)
-    #recibe los datos del cliente y los descomprime
+    # Recibe datos de algún cliente (máximo BUFFER_SIZE bytes)
+    data, addr = server_socket.recvfrom(BUFFER_SIZE)
+    
     try:
-        json_data = zlib.decompress(compressed_data).decode("utf-8")
-        #decodifica el mensaje y lo almacena en la lista
-        message = json.loads(json_data)
-        print(f"Datos recibidos de {addr}: {message}")
+        # Decodificar los datos recibidos desde JSON
+        data = json.loads(data.decode("utf-8"))
         
-        # Almacenar el mensaje en la lista
-        data_storage.append(message)
+        data_storage.append(data)
         
+        # Mostrar los datos recibidos en la consola del servidor
+        print(f"Datos recibidos de {addr}: {data}")
+               
         # Realizar el análisis AI de los datos acumulados
         analysis_result = analyze_data(data_storage)
         
         # Crear el mensaje de broadcast que incluye los datos y el análisis
         broadcast_message = {
-            "datos": message,
+            "datos": data,
             "analisis": analysis_result
         }
-        
-        json_broatcast = json.dumps(broadcast_message, separators=(",", ":"))
-        compressed_broadcast = zlib.compress(json_broatcast.encode("utf-8"))
-        #envia el mensaje al cliente
-        
-        # Enviar el mensaje en broadcast
+   
+        # Crear un nuevo socket para enviar los datos en modo broadcast
         broadcast_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+   
+        # Habilitar el modo broadcast en el socket de transmisión
         broadcast_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        broadcast_socket.sendto(json.dumps(broadcast_message).encode("utf-8"), (BROADCAST_IP, PORT))
-        broadcast_socket.close()
         
-        print(f"Datos transmitidos en broadcast: {broadcast_message}")
+        # Enviar los datos a todos los dispositivos en la red (broadcast)
+        broadcast_socket.sendto(json.dumps(broadcast_message).encode("utf-8"), (BROADCAST_IP, PORT))
+        
+        # Cerrar el socket de transmisión
+        broadcast_socket.close()
+
+        print(f"Datos transmitidos en broadcast: {broadcast_message}")   
         
     except Exception as e:
         print(f"Error al procesar los datos: {e}")
     
     # Se reduce la espera para permitir procesamiento continuo
-    time.sleep(0.1)
+    time.sleep(100)

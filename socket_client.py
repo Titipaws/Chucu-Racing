@@ -1,39 +1,40 @@
-import socket
-import json
-import zlib
+import socket  # Biblioteca para manejar sockets
+import json  # Biblioteca para manejar datos en formato JSON
 
-SERVER_IP = "localhost"
+SERVER_IP = "127.0.0.1"
 PORT = 12345
 
+# Crear un socket UDP
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+# Bucle infinito para enviar datos al servidor y recibir la respuesta
 while True:
+    # Solicitar datos al usuario
     ignition_time = input("Tiempo de ignición (ms): ")
     boost_pressure = input("Boost pressure (psi): ")
     afr = input("AFR (Relación aire-combustible): ")
     final_time = input("Tiempo final del carro (segundos): ")
 
+    # Crear un diccionario con los datos ingresados
     data = {
-        "Ignition Time": ignition_time,
-        "Boost Pressure": boost_pressure,
-        "AFR": afr,
-        "Final Time": final_time
+        "Ignition Time": float(ignition_time),
+        "Boost Pressure": float(boost_pressure),
+        "AFR": float(afr),
+        "Final Time": float(final_time)
     }
-    #para reducir el tama;o y comprimir el mensaje.
-    json_data = json.dumps(data, separators=(",", ":"))
-    compressed_data = zlib.compress(json_data.encode("utf-8"))
-    #envio de datos al servidor
 
-    client_socket.sendto(compressed_data, (SERVER_IP, PORT))
+    # Enviar los datos al servidor en formato JSON codificado en bytes
+    client_socket.sendto(json.dumps(data).encode("utf-8"), (SERVER_IP, PORT))
     print("Datos enviados al servidor.")
 
-    received_compressed_data, addr = client_socket.recvfrom(4096)
-    received_json = zlib.decompress(received_compressed_data).decode("utf-8")
-    received_data = json.loads(received_json)
-    #recibe los datos del servidor y los imprime en pantalla
-    
+    # Recibir datos en broadcast desde el servidor
+    data, _ = client_socket.recvfrom(4096)  # Esperar respuesta del servidor
+    received_data = json.loads(data.decode("utf-8"))  # Decodificar JSON
+
     print("Broadcast recibido:")
     if "datos" in received_data:
         print("Datos enviados:", received_data["datos"])
     if "analisis" in received_data:
         print("Análisis de los datos:", received_data["analisis"])
+        
+    
