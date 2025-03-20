@@ -1,3 +1,2 @@
 # Chucu-Racing
-proyecto chucu racing
-actualizacion semana 8
+Semana 8 de control de procesos
