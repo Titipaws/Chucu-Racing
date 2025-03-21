@@ -1,0 +1,58 @@
+import socket  # Biblioteca para manejar sockets
+import json  # Biblioteca para manejar datos en formato JSON
+
+SERVER_IP = "127.0.0.1"
+PORT = 12345
+
+# Crear un socket UDP
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+while True:
+    try:
+        # Solicitar datos al usuario y asegurarse de que sean valores numéricos válidos
+        ignition_time = float(input("Tiempo de ignición (ms): "))
+        boost_pressure = float(input("Boost pressure (psi): "))
+        afr = float(input("AFR (Relación aire-combustible): "))
+        final_time = float(input("Tiempo final del carro (segundos): "))
+
+        # Crear un diccionario con los datos ingresados
+        data = {
+            "Ignition Time": ignition_time,
+            "Boost Pressure": boost_pressure,
+            "AFR": afr,
+            "Final Time": final_time
+        }
+
+        # Enviar los datos al servidor en formato JSON codificado en bytes
+        client_socket.sendto(json.dumps(data).encode("utf-8"), (SERVER_IP, PORT))
+        print("Datos enviados al servidor.")
+
+        # Recibir datos en broadcast desde el servidor
+        client_socket.settimeout(2)  # Tiempo de espera de 2 segundos
+        try:
+            while True:
+                data, _ = client_socket.recvfrom(4096)  # Esperar respuesta del servidor
+                received_data = json.loads(data.decode("utf-8"))  # Decodificar JSON
+                
+                print("\nBroadcast recibido:")
+                if "datos" in received_data:
+                    print("Datos enviados:", received_data["datos"])
+                if "analisis" in received_data:
+                    print("Análisis de los datos:", received_data["analisis"])
+                
+                break  # Salir del bucle después de recibir la respuesta
+        except socket.timeout:
+            print("No se recibió respuesta del servidor.")
+
+        # Preguntar si se desea continuar enviando datos
+        continuar = input("\n¿Desea enviar otro conjunto de datos? (si/no): ").strip().lower()
+        if continuar != "si":
+            print("Cerrando el sistema...")
+            break
+
+    except ValueError:
+        print("Por favor, ingrese solo valores numéricos válidos.")
+
+# Cerrar el socket
+client_socket.close()
+
